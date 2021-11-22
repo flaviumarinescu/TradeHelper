@@ -1,0 +1,6 @@
+__pycache__/
+
+/**/.env*
+
+/cache/dump.rdb
+/cache/appendonly.aof

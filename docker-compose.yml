@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+
+  cache:
+    container_name: redis
+    hostname: cache
+    image: "redis:6.2-alpine"
+    command: redis-server --appendonly yes 
+    restart: always
+    sysctls:
+      - net.core.somaxconn=65535
+    volumes:
+      - ./cache:/data
+    ports:
+      - "6379:6379"
+
+  scheduler:
+    container_name: huey
+    hostname: scheduler
+    build: ./scheduler
+    command: huey_consumer.py scheduler.huey
+    restart: always
+    volumes:
+      - ./scheduler:/usr/src/scheduler
+    depends_on:
+      - cache
+
+  notifier:
+    container_name: notifier
+    hostname: notifier
+    build: ./notifications
+    command: python notifier.py
+    restart: always
+    env_file:
+      - ./notifications/.env
+    volumes:
+      - ./notifications:/usr/src/notifications
+    depends_on:
+      - cache

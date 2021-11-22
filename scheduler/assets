@@ -1,0 +1,9 @@
+##
+##    Scheduler looks inside this file to obtain assets for yahoo_market_data_pipeline
+## New entries should contain ticker names (yahoo style) and no other additional characters.
+##
+##
+
+audusd=x
+gc=f
+eurusd=x
