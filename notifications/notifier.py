@@ -22,11 +22,8 @@ def subscriber(channel: str, provider: NotificationProvider) -> None:
             print(
                 f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Message : {message}"
             )
-            try:
-                data = message.get("data")
-                comm.send_text(data)
-            except Exception as e:
-                comm.send_text(f"Exception : {e}")
+            data = message.get("data")
+            comm.send_text(data)
 
 
 if __name__ == "__main__":

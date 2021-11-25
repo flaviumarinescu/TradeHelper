@@ -2,6 +2,29 @@ version: '3.8'
 
 services:
 
+  backend:
+    container_name: django
+    hostname: backend
+    build: ./backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend/:/usr/src/backend/
+    ports:
+      - 8000:8000
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+
+  db:
+    container_name: postgresql
+    hostname: db
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./db/.env
+
   cache:
     container_name: redis
     hostname: cache
@@ -38,3 +61,6 @@ services:
       - ./notifications:/usr/src/notifications
     depends_on:
       - cache
+
+volumes:
+  postgres_data:
