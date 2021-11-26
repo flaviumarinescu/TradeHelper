@@ -1,7 +1,7 @@
 from huey import crontab, SqliteHuey
 import redis
 from pipelines.yahoo_market_data import extract, clean, load, YF_PARAMS
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 huey = SqliteHuey(
@@ -26,14 +26,18 @@ cache = redis.Redis(
         hour="*",
         minute="3",
     ),
-    retries=2,
-    retry_delay=30,
+    # retries=2,
+    # retry_delay=30,
 )
 def yahoo_market_data_pipeline() -> None:
 
     with open("assets") as f:
         assets = [
-            {"tickers": line.rstrip()}
+            {
+                "tickers": line.rstrip(),
+                "start": datetime.now() - timedelta(days=120),
+                "end": datetime.now(),
+            }
             for line in f
             if not line.isspace() and not line.startswith("##")
         ]
