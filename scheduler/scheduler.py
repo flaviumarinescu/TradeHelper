@@ -32,7 +32,7 @@ def yahoo_candles_pipeline() -> None:
     with open("assets") as f:
         assets = [
             {
-                "tickers": line.rstrip(),
+                "tickers": line.rstrip().split(",")[0],
                 "start": datetime.now() - timedelta(days=120),
                 "end": datetime.now(),
             }
