@@ -1,7 +1,8 @@
 from multiprocessing import Process
+from datetime import datetime
 from providers import Telegram, NotificationProvider
 import redis
-from datetime import datetime
+
 
 cache = redis.Redis(
     **{

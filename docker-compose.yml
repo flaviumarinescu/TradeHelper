@@ -44,6 +44,8 @@ services:
     build: ./scheduler
     command: huey_consumer.py scheduler.huey
     restart: always
+    env_file:
+      - ./scheduler/.env
     volumes:
       - ./scheduler:/usr/src/scheduler
     depends_on:

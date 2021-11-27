@@ -1,9 +1,8 @@
-import pandas as pd
 from datetime import datetime, timedelta
-import yfinance as yf
 from typing import Tuple
-import redis
-import pickle
+import pandas as pd
+import yfinance as yf
+from . import common_clean
 
 
 YF_PARAMS = {
@@ -26,20 +25,12 @@ def extract(**kwargs) -> Tuple[pd.DataFrame, str]:
     raise RuntimeError("Data in invalid")
 
 
-def clean(df: pd.DataFrame, dropna: str = "any") -> pd.DataFrame:
+def clean(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = map(str.lower, df.columns)
-    date_column = df.columns[df.columns.str.contains("date")]
-    if not date_column.empty:
-        df.set_index(date_column.values[0], inplace=True)
+    df.index.name = df.index.name.lower()
     df.index = pd.to_datetime(df.index)
 
-    if df.index.tz:
-        df = df.tz_convert("Europe/Bucharest")
-        df = df.tz_localize(None)
-
-    if dropna:
-        df.dropna(how=dropna, inplace=True)
-    df = df.reindex(columns=["open", "high", "low", "close", "volume"])
+    df = common_clean(df)
 
     if not df.empty:
         i = df.index[-1].time()  # since data is from yahoo finance... we need to adapt
@@ -49,8 +40,3 @@ def clean(df: pd.DataFrame, dropna: str = "any") -> pd.DataFrame:
             return df
     else:
         raise RuntimeError("Data in invalid")
-
-
-def load(df: pd.DataFrame, ticker: str, cache: redis.Redis) -> bool:
-    df_pickled = pickle.dumps(df, protocol=pickle.HIGHEST_PROTOCOL)
-    return cache.set(ticker, df_pickled)

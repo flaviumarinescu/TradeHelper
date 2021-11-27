@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-import telebot
 from os import environ
+import telebot
 
 
 class NotificationProvider(ABC):
@@ -15,12 +15,14 @@ class NotificationProvider(ABC):
 
 class Telegram(NotificationProvider):
     def __init__(self):
-        self._bot = telebot.TeleBot(token=environ.get("TOKEN"), parse_mode=None)
-        self._chat_id = environ.get("CHAT_ID")
+        self._bot = telebot.TeleBot(
+            token=environ.get("TELEGRAM_TOKEN"), parse_mode=None
+        )
+        self._chat_id = environ.get("TELEGRAM_CHAT_ID")
 
     def send_text(self, message: str) -> None:
         if message:
             self._bot.send_message(self._chat_id, message, parse_mode=None)
 
-    def send_image(self) -> None:
+    def send_image(self, image) -> None:
         raise NotImplementedError
