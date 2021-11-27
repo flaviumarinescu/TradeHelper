@@ -4,6 +4,7 @@ from huey import crontab, SqliteHuey
 from pipelines import load, binance_candles, yahoo_candles
 from binance.exceptions import BinanceAPIException, BinanceRequestException
 
+
 huey = SqliteHuey(
     filename="/tmp/huey.db",
 )
