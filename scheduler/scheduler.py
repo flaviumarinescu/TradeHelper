@@ -22,7 +22,7 @@ cache = redis.Redis(
     crontab(
         month="*",
         day="*",
-        day_of_week="*",
+        day_of_week="1-5",
         hour="*",
         minute="3",
     ),
@@ -69,7 +69,7 @@ def yahoo_candles_pipeline() -> None:
         day="*",
         day_of_week="*",
         hour="*",
-        minute="37",
+        minute="0",
     ),
 )
 def binance_candles_pipeline() -> None:
