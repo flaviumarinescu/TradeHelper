@@ -1,5 +1,6 @@
 version: '3.8'
 
+
 services:
 
   backend:
@@ -13,30 +14,37 @@ services:
       - 8000:8000
     env_file:
       - ./backend/.env
+    environment:
+      - TZ=Europe/Bucharest
     depends_on:
       - db
 
   db:
     container_name: postgresql
+    build: ./db
     hostname: db
-    image: postgres:13-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     env_file:
       - ./db/.env
+    environment:
+      - TZ=Europe/Bucharest
 
   cache:
     container_name: redis
     hostname: cache
-    image: "redis:6.2-alpine"
+    build: ./cache
     command: redis-server --appendonly yes 
     restart: always
+    environment:
+      - TZ=Europe/Bucharest
+      - PGTZ=Europe/Bucharest
     sysctls:
       - net.core.somaxconn=65535
     volumes:
       - ./cache:/data
     ports:
-      - "6379:6379"
+      - 6379:6379
 
   scheduler:
     container_name: huey
@@ -46,6 +54,8 @@ services:
     restart: always
     env_file:
       - ./scheduler/.env
+    environment:
+      - TZ=Europe/Bucharest
     volumes:
       - ./scheduler:/usr/src/scheduler
     depends_on:
@@ -59,10 +69,13 @@ services:
     restart: always
     env_file:
       - ./notifications/.env
+    environment:
+      - TZ=Europe/Bucharest
     volumes:
       - ./notifications:/usr/src/notifications
     depends_on:
       - cache
+
 
 volumes:
   postgres_data:

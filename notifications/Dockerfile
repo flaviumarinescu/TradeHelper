@@ -1,6 +1,9 @@
 # pull official base image
 FROM python:3.9-alpine
 
+# set timezone
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # set work directory
 WORKDIR /usr/src/notifications
 

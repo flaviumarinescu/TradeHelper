@@ -4,6 +4,7 @@
 
 from typing import Any
 import pickle
+from os import environ
 import pandas as pd
 import redis
 
@@ -26,14 +27,14 @@ def load(obj: Any, key: str, cache: redis.Redis) -> bool:
 def common_clean(
     dataframe: pd.DataFrame,
     dropna: str = "any",
-    timezone: str = "Europe/Bucharest",
+    timezone: str = environ.get("TZ"),
 ) -> pd.DataFrame:
     """Common data cleaning steps.
 
     Args:
         dataframe (pd.DataFrame): Dataframe with open high low close columns and datetime index
         dropna (str, optional): Removes any Nan values from dataframe. Defaults to "any".
-        timezone (str, optional): Switches timezone to this values. Defaults to "Europe/Bucharest".
+        timezone (str, optional): Switches timezone to this values. Defaults to environ.get("TZ").
 
     Returns:
         pd.DataFrame: Returns processed dataframe.

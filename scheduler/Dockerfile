@@ -1,5 +1,8 @@
-# pull official base image
+# pull official base image; using slim due to pandas installation problem
 FROM python:3.9-slim
+
+# set timezone
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # set work directory
 WORKDIR /usr/src/scheduler
