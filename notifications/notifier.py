@@ -1,20 +1,24 @@
+"""
+    Module in charge of running subscriber function,
+    that listens on a specifc channel and pushes messages to provider.
+"""
+
 from multiprocessing import Process
 from datetime import datetime
 from providers import Telegram, NotificationProvider
 import redis
 
 
-cache = redis.Redis(
-    **{
-        "host": "cache",
-        "db": 0,
-        "charset": "utf-8",
-        "port": 6379,
-    }
-)
+cache = redis.Redis(host="cache")
 
 
 def subscriber(channel: str, provider: NotificationProvider) -> None:
+    """Function that waits for data to be published from redis and reacts to messages.
+
+    Args:
+        channel (str): A redis subscriber channel
+        provider (NotificationProvider): A class that has send_text method implemented.
+    """
     comm = provider()
     pubsub = cache.pubsub()
     pubsub.subscribe(channel)

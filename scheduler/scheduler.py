@@ -1,22 +1,20 @@
+"""
+    Tasks to be scheduled by the huey consumer.
+"""
+
 from datetime import datetime, timedelta
+from os import environ
 import redis
 from huey import crontab, SqliteHuey
-from pipelines import load, binance_candles, yahoo_candles
 from binance.exceptions import BinanceAPIException, BinanceRequestException
+from pipelines import load, binance_candles, yahoo_candles
 
 
 huey = SqliteHuey(
-    filename="/tmp/huey.db",
+    filename=environ.get("HUEY_DB"),
 )
 
-cache = redis.Redis(
-    **{
-        "host": "cache",
-        "db": 0,
-        "charset": "utf-8",
-        "port": 6379,
-    }
-)
+cache = redis.Redis(host="cache")
 
 
 @huey.periodic_task(
@@ -29,15 +27,18 @@ cache = redis.Redis(
     ),
 )
 def yahoo_candles_pipeline() -> None:
-    """Downloads OHLCV asset data from yahoo finance"""
-    with open("assets") as f:
+    """
+    Downloads OHLCV asset data from yahoo finance,
+    Transforms data and stores it into cache. Acts as and ETL Pipeline.
+    """
+    with open("assets", encoding="UTF-8") as file:
         assets = [
             {
                 "tickers": line.rstrip().split(",")[0],
                 "start": datetime.now() - timedelta(days=120),
                 "end": datetime.now(),
             }
-            for line in f
+            for line in file
             if not line.isspace()
             and not line.startswith("##")
             and line.rstrip().split(",")[1] == "yahoo"
@@ -46,21 +47,24 @@ def yahoo_candles_pipeline() -> None:
     for asset in assets:
         kwargs = {**yahoo_candles.YF_PARAMS, **asset}
         try:
-            df, ticker = yahoo_candles.extract(**kwargs)
-            df = yahoo_candles.clean(df)
+            dataframe, ticker = yahoo_candles.extract(**kwargs)
+            dataframe = yahoo_candles.clean(dataframe)
             cache.ping()  # Check cache availability
-        except redis.exceptions.ConnectionError as e:
+        except redis.exceptions.ConnectionError as err:
             print(
-                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Failed to connect with redis {e}"
+                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                f"Failed to connect with redis {err}"
             )
-        except Exception as e:
+        except (Exception,) as err:  # pylint: disable=broad-except
             print(
-                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {asset['tickers']} processing from yahoo failed: {e}"
+                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                f"{asset['tickers']} processing from yahoo failed: {err}"
             )
         else:
-            load(df, ticker, cache)
+            load(dataframe, ticker, cache)
             print(
-                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {ticker} successfully processed"
+                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                f"{ticker} successfully processed"
             )
 
 
@@ -74,8 +78,11 @@ def yahoo_candles_pipeline() -> None:
     ),
 )
 def binance_candles_pipeline() -> None:
-    """Downloads OHLCV asset data from binance"""
-    with open("assets") as f:
+    """
+    Downloads OHLCV asset data from binance,
+    Transforms data and stores it into cache. Acts as and ETL Pipeline.
+    """
+    with open("assets", encoding="UTF-8") as file:
         assets = [
             {
                 "symbol": line.rstrip().split(",")[0].upper(),
@@ -84,7 +91,7 @@ def binance_candles_pipeline() -> None:
                 ),
                 "end_str": str(datetime.timestamp(datetime.now())),
             }
-            for line in f
+            for line in file
             if not line.isspace()
             and not line.startswith("##")
             and line.rstrip().split(",")[1] == "binance"
@@ -94,23 +101,27 @@ def binance_candles_pipeline() -> None:
         for asset in assets:
             kwargs = {**binance_candles.BINANCE_PARAMS, **asset}
             try:
-                df, ticker = binance_candles.extract(binance, **kwargs)
-                df = binance_candles.clean(df)
+                dataframe, ticker = binance_candles.extract(binance, **kwargs)
+                dataframe = binance_candles.clean(dataframe)
                 cache.ping()
-            except redis.exceptions.ConnectionError as e:
+            except redis.exceptions.ConnectionError as err:
                 print(
-                    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Failed to connect with redis {e}"
+                    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                    f"Failed to connect with redis {err}"
                 )
-            except (BinanceAPIException, BinanceRequestException) as e:
+            except (BinanceAPIException, BinanceRequestException) as err:
                 print(
-                    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {asset['tickers']} download from binance failed: {e}"
+                    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                    f"{asset['tickers']} download from binance failed: {err}"
                 )
-            except Exception as e:
+            except (Exception,) as err:  # pylint: disable=broad-except
                 print(
-                    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {asset['tickers']} processing from binance failed: {e}"
+                    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                    f"{asset['tickers']} processing from binance failed: {err}"
                 )
             else:
-                load(df, ticker, cache)
+                load(dataframe, ticker, cache)
                 print(
-                    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {ticker} successfully processed"
+                    f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                    f"{ticker} successfully processed"
                 )

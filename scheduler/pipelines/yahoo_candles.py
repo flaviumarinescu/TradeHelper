@@ -1,3 +1,7 @@
+"""
+    Pipeline functionality for yahoo finance.
+"""
+
 from datetime import datetime, timedelta
 from typing import Tuple
 import pandas as pd
@@ -17,26 +21,46 @@ YF_PARAMS = {
 }
 
 
-def extract(**kwargs) -> Tuple[pd.DataFrame, str]:
-    df = yf.download(**kwargs)
-    if isinstance(df, pd.DataFrame):
-        if not df.empty:
-            return df, kwargs["tickers"]
+def extract(**kwargs: YF_PARAMS) -> Tuple[pd.DataFrame, str]:
+    """Extracts data from yahoo finance.
+
+    Raises:
+        RuntimeError: In case return data is not as expected.
+
+    Returns:
+        Tuple[pd.DataFrame, str]: Raw dataframe and ticker symbol.
+    """
+    dataframe = yf.download(**kwargs)
+    if isinstance(dataframe, pd.DataFrame):
+        if not dataframe.empty:
+            return dataframe, kwargs["tickers"]
     raise RuntimeError("Data in invalid")
 
 
-def clean(df: pd.DataFrame) -> pd.DataFrame:
-    df.columns = map(str.lower, df.columns)
-    df.index.name = df.index.name.lower()
-    df.index = pd.to_datetime(df.index)
+def clean(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """Cleans extracted data from yahoo finance.
 
-    df = common_clean(df)
+    Args:
+        dataframe (pd.DataFrame): Raw dataframe form the above, extract, function.
 
-    if not df.empty:
-        i = df.index[-1].time()  # since data is from yahoo finance... we need to adapt
-        if not (i.second == 0 and (i.minute == 30 or i.minute == 0)):
-            return df[:-1]
-        else:
-            return df
-    else:
-        raise RuntimeError("Data in invalid")
+    Raises:
+        RuntimeError: In case cleaning resulted in an empty dataframe.
+
+    Returns:
+        pd.DataFrame: Processed, ready to use, dataframe
+            * Check for final intended format in __init__.py, common_clean()
+    """
+    dataframe.columns = map(str.lower, dataframe.columns)
+    dataframe.index.name = dataframe.index.name.lower()
+    dataframe.index = pd.to_datetime(dataframe.index)
+
+    dataframe = common_clean(dataframe)
+
+    if not dataframe.empty:
+        i = dataframe.index[
+            -1
+        ].time()  # since data is from yahoo finance... we need to adapt
+        if not (i.second == 0 and (i.minute in (30, 0))):
+            return dataframe[:-1]
+        return dataframe
+    raise RuntimeError("Data in invalid")
