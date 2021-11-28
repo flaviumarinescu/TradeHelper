@@ -17,7 +17,7 @@ def subscriber(channel: str, provider: NotificationProvider) -> None:
 
     Args:
         channel (str): A redis subscriber channel
-        provider (NotificationProvider): A class that has send_text method implemented.
+        provider (NotificationProvider): Class that has send_text method implemented.
     """
     comm = provider()
     pubsub = cache.pubsub()
@@ -25,7 +25,8 @@ def subscriber(channel: str, provider: NotificationProvider) -> None:
     for message in pubsub.listen():
         if message.get("type") == "message":
             print(
-                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Message : {message}"
+                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                f"Message : {message}"
             )
             data = message.get("data")
             comm.send_text(data)

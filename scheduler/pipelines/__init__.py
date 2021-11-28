@@ -38,7 +38,7 @@ def common_clean(
     Returns:
         pd.DataFrame: Returns processed dataframe.
 
-            The following format should be wanted after running specific pipeline clean function
+            The following format should be expected after running specific pipeline clean function
             and the common clean.
 
                                     open     high      low    close      volume

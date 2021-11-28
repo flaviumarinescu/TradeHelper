@@ -37,7 +37,7 @@ class BinanceContext:
             api_secret if api_secret else environ.get("BINANCE_API_SECRET")
         )
 
-    def download(self, **kwargs) -> List:
+    def download(self, **kwargs: BINANCE_PARAMS) -> List:
         """Downloads raw data from binance.
 
         Returns:
@@ -58,6 +58,7 @@ class BinanceContext:
                         "28.46694368",      // Taker buy quote asset volume
                         "17928899.62484339" // Ignore
                     ],
+                    ...
                 ]
         """
         return self.client.get_historical_klines(**kwargs)
@@ -75,7 +76,7 @@ class BinanceContext:
         if not exec_tb:
             self.client.close_connection()
         else:
-            print(f"Binance forced exit reason: {exec_type}, {exec_val}, {exec_tb}")
+            print(f"Binance forced exit;\nReason: {exec_type}, {exec_val}, {exec_tb}")
         return False
 
 
