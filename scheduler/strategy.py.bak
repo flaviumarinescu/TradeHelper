@@ -1,0 +1,123 @@
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+
+
+def change_context(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
+    """
+    Change DataFrame timeframe
+    """
+    df = df.resample(timeframe).agg(
+        {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+            "volume": "sum",
+        }
+    )
+    df.dropna(how="any", inplace=True)
+    return df
+
+
+def add_tehnicals(df: pd.DataFrame, contexts: dict) -> pd.DataFrame:
+    """
+    Adds strategy data to dataframe
+    """
+    for context in list(contexts.values()):
+        if context != "off":
+            sma = (
+                df.change_context(timeframe=context)["close"].rolling(window=89).mean()
+            )
+            sma.name = f"sma_{context}"
+            df = pd.merge(df, sma, how="left", left_index=True, right_index=True)
+            df[sma.name].fillna(method="ffill", inplace=True)
+
+    df["sma_interval"] = df.close.rolling(window=89).mean()
+    df["sma_fast"] = df.close.rolling(window=9).mean()
+
+    if not df.empty:
+        return df
+    else:
+        raise RuntimeError("Not enough data to generate strategy paramenters")
+
+
+def find_levels(
+    df: pd.DataFrame,
+    type: str = "filtered",  # filter useses the following two arguments,
+    # w/o it all levels are displayed
+    spacing: float = 1.2,  # increasing spacing will increase number of levels
+    thickness: float = 0.01,  # increase space between upper and lower portion
+    # of supply/demand area (as % of price magnitude)
+    timeframe: str = "1h",  # pandas compatible timeframe
+    period: int = 5,  # how many DAYS to look back for s/r levels
+    start: datetime = datetime.now(),  # from here it begins counting back < period >
+) -> pd.DataFrame:
+    def isSupport(df, i):
+        support = (
+            df["low"][i] < df["low"][i - 1]
+            and df["low"][i] < df["low"][i + 1]
+            and df["low"][i + 1] < df["low"][i + 2]
+            and df["low"][i - 1] < df["low"][i - 2]
+        )
+        return support
+
+    def isResistance(df, i):
+        resistance = (
+            df["high"][i] > df["high"][i - 1]
+            and df["high"][i] > df["high"][i + 1]
+            and df["high"][i + 1] > df["high"][i + 2]
+            and df["high"][i - 1] > df["high"][i - 2]
+        )
+        return resistance
+
+    def isFarFromLevel(l, s):
+        return np.sum([abs(l - x) < s for x in levels]) == 0
+
+    df = df.change_context(timeframe=timeframe)[
+        (start - timedelta(days=period)).strftime("%Y-%m-%d") : start.strftime(
+            "%Y-%m-%d"
+        )
+    ]
+
+    levels = []
+    mirror = []
+    if type == "raw":
+        for i in range(2, df.shape[0] - 2):
+            if isSupport(df, i):
+                levels.append((i, df["low"][i]))
+                mirror.append((i, df["low"][i], "s"))
+            elif isResistance(df, i):
+                levels.append((i, df["high"][i]))
+                mirror.append((i, df["high"][i], "r"))
+    elif type == "filtered":
+        s = np.mean(df["high"] - df["low"]) / spacing
+        for i in range(2, df.shape[0] - 2):
+            if isSupport(df, i):
+                l = df["low"][i]
+                if isFarFromLevel(l, s):
+                    levels.append((i, l))
+                    mirror.append((i, l, "s"))
+            elif isResistance(df, i):
+                l = df["high"][i]
+                if isFarFromLevel(l, s):
+                    levels.append((i, l))
+                    mirror.append((i, l, "r"))
+
+    level_size = (df.high.max() - df.low.min()) * thickness
+
+    temp = []
+    for level in mirror:
+        temp.append(
+            (
+                df.index[level[0]],
+                level[1] - 2 * level_size
+                if level[2] == "r"
+                else level[1] + 2 * level_size,
+                level[1],
+            )
+        )
+
+    return pd.DataFrame(temp, columns=["Datetime", "start", "end"]).set_index(
+        "Datetime"
+    )

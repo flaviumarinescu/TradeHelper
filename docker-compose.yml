@@ -1,0 +1,115 @@
+version: '3.8'
+
+
+services:
+  # fastapi:
+  #   container_name: fastapi
+  #   hostname: fastapi
+  #   build: ./fastapi
+  #   command: python app.py
+  #   restart: always    
+  #   volumes:
+  #     - ./fastapi/:/usr/src/fastapi/
+  #   ports:
+  #     - 8002:10000
+  #     - 8003:8003
+  #   env_file:
+  #     - ./fastapi/.env
+  #   environment:
+  #     - TZ=Europe/Bucharest
+  #   depends_on:
+  #     - cache
+  #     - db
+
+  backend:
+    container_name: backend
+    hostname: backend
+    build: ./backend
+    command: uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+    restart: always    
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    ports:
+      - 8002:8000
+    environment:
+      - TZ=Europe/Bucharest
+    depends_on:
+      - cache
+      - db
+
+  frontend:
+    container_name: frontend
+    hostname: frontend
+    build: ./frontend
+    volumes:
+      - './frontend:/app'
+      - '/app/node_modules'
+    ports:
+      - 8003:8080
+
+  db:
+    container_name: rdbms
+    build: ./db
+    hostname: db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./db/.env
+    environment:
+      - TZ=Europe/Bucharest
+    ports:
+      - 5432:5432
+
+  cache:
+    container_name: cache
+    hostname: cache
+    build: ./cache
+    command: redis-server --appendonly yes 
+    restart: always
+    environment:
+      - TZ=Europe/Bucharest
+      - PGTZ=Europe/Bucharest
+    sysctls:
+      - net.core.somaxconn=65535
+    volumes:
+      - ./cache:/data
+    ports:
+      - 6379:6379
+
+  scheduler:
+    container_name: scheduler
+    hostname: scheduler
+    build: ./scheduler
+    command: huey_consumer.py scheduler.huey
+    restart: always
+    env_file:
+      - ./scheduler/.env
+    environment:
+      - TZ=Europe/Bucharest
+    volumes:
+      - ./scheduler:/usr/src/scheduler
+    depends_on:
+      - cache
+
+  notifier:
+    container_name: notifier
+    hostname: notifier
+    build: ./notifier
+    command: python notifier.py
+    restart: always
+    env_file:
+      - ./notifier/.env
+    environment:
+      - TZ=Europe/Bucharest
+    volumes:
+      - ./notifier:/usr/src/notifier
+    depends_on:
+      - cache
+
+
+volumes:
+  postgres_data:
+
+

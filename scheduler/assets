@@ -1,0 +1,12 @@
+##
+##    Scheduler looks inside this file to obtain assets for yahoo_candles_pipeline & binance_candles_pipeline
+##    New entries should contain ticker name (yahoo style, respectively binance style) and broker's name separated by comma
+##
+##
+
+audusd=x,yahoo
+gc=f,yahoo
+ng=f,yahoo
+eurusd=x,yahoo
+ethusdt,binance
+galausdt,binance

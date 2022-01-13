@@ -1,0 +1,15 @@
+-- upgrade --
+CREATE TABLE IF NOT EXISTS "entries" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "market" VARCHAR(10) NOT NULL,
+    "direction" VARCHAR(5) NOT NULL,
+    "setup" VARCHAR(25) NOT NULL,
+    "order" VARCHAR(10) NOT NULL,
+    "result" DOUBLE PRECISION NOT NULL  DEFAULT 0,
+    "obs" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL  DEFAULT CURRENT_TIMESTAMP,
+    "modified_at" TIMESTAMPTZ NOT NULL  DEFAULT CURRENT_TIMESTAMP,
+    "author_id" INT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE
+);
+-- downgrade --
+DROP TABLE IF EXISTS "entries";
