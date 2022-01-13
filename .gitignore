@@ -1,0 +1,13 @@
+__pycache__/
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+*.ipynb
+
+*.code-workspace
+
+/**/*.bak
+/**/.env*
+/cache/dump.rdb
+/cache/appendonly.aof
+
+.vscode
