@@ -2,25 +2,6 @@ version: '3.8'
 
 
 services:
-  # fastapi:
-  #   container_name: fastapi
-  #   hostname: fastapi
-  #   build: ./fastapi
-  #   command: python app.py
-  #   restart: always    
-  #   volumes:
-  #     - ./fastapi/:/usr/src/fastapi/
-  #   ports:
-  #     - 8002:10000
-  #     - 8003:8003
-  #   env_file:
-  #     - ./fastapi/.env
-  #   environment:
-  #     - TZ=Europe/Bucharest
-  #   depends_on:
-  #     - cache
-  #     - db
-
   backend:
     container_name: backend
     hostname: backend
