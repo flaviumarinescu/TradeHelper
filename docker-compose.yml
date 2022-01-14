@@ -15,7 +15,7 @@ services:
     ports:
       - 8002:8000
     environment:
-      - TZ=Europe/Bucharest
+      - TZ=America/New_York
     depends_on:
       - cache
       - db
@@ -24,6 +24,8 @@ services:
     container_name: frontend
     hostname: frontend
     build: ./frontend
+    environment:
+      - TZ=America/New_York
     volumes:
       - './frontend:/app'
       - '/app/node_modules'
@@ -39,7 +41,7 @@ services:
     env_file:
       - ./db/.env
     environment:
-      - TZ=Europe/Bucharest
+      - TZ=America/New_York
     ports:
       - 5432:5432
 
@@ -50,8 +52,8 @@ services:
     command: redis-server --appendonly yes 
     restart: always
     environment:
-      - TZ=Europe/Bucharest
-      - PGTZ=Europe/Bucharest
+      - TZ=America/New_York
+      - PGTZ=America/New_York
     sysctls:
       - net.core.somaxconn=65535
     volumes:
@@ -68,7 +70,7 @@ services:
     env_file:
       - ./scheduler/.env
     environment:
-      - TZ=Europe/Bucharest
+      - TZ=America/New_York
     volumes:
       - ./scheduler:/usr/src/scheduler
     depends_on:
@@ -83,7 +85,7 @@ services:
     env_file:
       - ./notifier/.env
     environment:
-      - TZ=Europe/Bucharest
+      - TZ=America/New_York
     volumes:
       - ./notifier:/usr/src/notifier
     depends_on:
