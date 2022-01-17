@@ -1,14 +1,14 @@
 """
     Tasks to be scheduled by the huey consumer.
 """
-from copyreg import pickle
+import pickle
 from datetime import datetime, timedelta
 from os import environ
 import redis
 from huey import crontab, SqliteHuey
 from binance.exceptions import BinanceAPIException, BinanceRequestException
-from pipelines import load, binance_candles, yahoo_candles
 
+from pipelines import load, binance_candles, yahoo_candles
 from strategy import sma_touch as strategy
 
 huey = SqliteHuey(
@@ -142,24 +142,26 @@ def check_strategy(assets: list, pipeline: str) -> None:
         pipeline (str): Identifier for pipeline
 
     """
-
-    now = datetime.now()
-    if not now.hour in [0, 4, 8, 12, 16, 20]:
+    if not datetime.now().hour in [0, 4, 8, 12, 16, 20]:
         return
 
     warehouse = redis.Redis(host="cache", db=1)
     to_notify = []
+
     for asset in assets:
         try:
             data = cache.get(asset)
-        except:
-            continue
+        except redis.exceptions.ConnectionError as err:
+            print(
+                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                f"Failed to connect with redis {err}"
+            )
 
         dataframe = pickle.loads(data)
         dataframe = strategy.apply(dataframe)
-        load(dataframe, warehouse)
+        load(dataframe, asset, warehouse)
 
-        if strategy.isValid(dataframe):
+        if strategy.is_valid(dataframe):
             to_notify.append(asset)
 
     if to_notify:

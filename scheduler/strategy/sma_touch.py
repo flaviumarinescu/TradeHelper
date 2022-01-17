@@ -23,7 +23,7 @@ def apply(dataframe: pd.DataFrame, sma: int = 9, context: str = "4h") -> pd.Data
     return dataframe
 
 
-def isValid(dataframe: pd.DataFrame) -> bool:
+def is_valid(dataframe: pd.DataFrame) -> bool:
     """Check if last entry touches sma
 
     Args:
