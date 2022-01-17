@@ -24,7 +24,7 @@ cache = redis.Redis(host="cache")
         day="*",
         day_of_week="1-5",
         hour="*",
-        minute="*",
+        minute="3",
     ),
 )
 def yahoo_candles_pipeline() -> None:
