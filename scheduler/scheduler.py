@@ -1,7 +1,7 @@
 """
     Tasks to be scheduled by the huey consumer.
 """
-
+from copyreg import pickle
 from datetime import datetime, timedelta
 from os import environ
 import redis
@@ -9,7 +9,7 @@ from huey import crontab, SqliteHuey
 from binance.exceptions import BinanceAPIException, BinanceRequestException
 from pipelines import load, binance_candles, yahoo_candles
 
-# from strategy import sma_touch as strategy
+from strategy import sma_touch as strategy
 
 huey = SqliteHuey(
     filename=environ.get("HUEY_DB"),
@@ -24,14 +24,14 @@ cache = redis.Redis(host="cache")
         day="*",
         day_of_week="1-5",
         hour="*",
-        minute="3",
+        minute="*",
     ),
 )
 def yahoo_candles_pipeline() -> None:
     """
-    Downloads OHLCV asset data from yahoo finance,
-    Transforms data and stores it into cache. Acts as and ETL Pipeline.
-    Publishes a message in case assets are of interest according to strategy validation.
+    Downloads OHLCV asset data from yahoo finance, transforms data and stores it into cache.
+    Acts as and ETL Pipeline. Data is saved in redis cache db 0, which acts as a data lake.
+    When finished, schedules a strategy check.
     """
     with open("assets", encoding="UTF-8") as file:
         assets = [
@@ -46,16 +46,11 @@ def yahoo_candles_pipeline() -> None:
             and line.rstrip().split(",")[1] == "yahoo"
         ]
 
-    of_interest = []
-
     for asset in assets:
         kwargs = {**yahoo_candles.YF_PARAMS, **asset}
         try:
             dataframe, ticker = yahoo_candles.extract(**kwargs)
             dataframe = yahoo_candles.clean(dataframe)
-            # dataframe = strategy.apply(dataframe)
-            # if strategy.isValid(dataframe):
-            #     of_interest.append(ticker)
             cache.ping()  # Check cache availability
         except redis.exceptions.ConnectionError as err:
             print(
@@ -74,11 +69,7 @@ def yahoo_candles_pipeline() -> None:
                 f"{ticker} successfully processed"
             )
 
-    # if of_interest:
-    #     cache.publish(
-    #         "notify",
-    #         f"Yahoo Pipeline: {', '.join(of_interest)}",
-    #     )
+    check_strategy(assets, "Yahoo")
 
 
 @huey.periodic_task(
@@ -92,9 +83,9 @@ def yahoo_candles_pipeline() -> None:
 )
 def binance_candles_pipeline() -> None:
     """
-    Downloads OHLCV asset data from binance,
-    Transforms data and stores it into cache. Acts as and ETL Pipeline.
-    Publishes a message in case assets are of interest according to strategy validation.
+    Downloads OHLCV asset data from binance, transforms data and stores it into cache.
+    Acts as and ETL Pipeline. Data is saved in redis cache db 0, which acts as a data lake.
+    When finished, schedules a strategy check.
     """
     with open("assets", encoding="UTF-8") as file:
         assets = [
@@ -111,17 +102,12 @@ def binance_candles_pipeline() -> None:
             and line.rstrip().split(",")[1] == "binance"
         ]
 
-    # of_interest = []
-
     with binance_candles.BinanceContext() as binance:
         for asset in assets:
             kwargs = {**binance_candles.BINANCE_PARAMS, **asset}
             try:
                 dataframe, ticker = binance_candles.extract(binance, **kwargs)
                 dataframe = binance_candles.clean(dataframe)
-                # dataframe = strategy.apply(dataframe)
-                # if strategy.isValid(dataframe):
-                #     of_interest.append(ticker)
                 cache.ping()
             except redis.exceptions.ConnectionError as err:
                 print(
@@ -144,9 +130,40 @@ def binance_candles_pipeline() -> None:
                     f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
                     f"{ticker} successfully processed"
                 )
+    check_strategy(assets, "Binance")
 
-    # if of_interest:
-    #     cache.publish(
-    #         "notify",
-    #         f"Binance Pipeline: {', '.join(of_interest)}",
-    #     )
+
+@huey.task()
+def check_strategy(assets: list, pipeline: str) -> None:
+    """Applies a strategy, loads data into warehouse and notifies in case of validation.
+
+    Args:
+        assets (list): List of assets
+        pipeline (str): Identifier for pipeline
+
+    """
+
+    now = datetime.now()
+    if not now.hour in [0, 4, 8, 12, 16, 20]:
+        return
+
+    warehouse = redis.Redis(host="cache", db=1)
+    to_notify = []
+    for asset in assets:
+        try:
+            data = cache.get(asset)
+        except:
+            continue
+
+        dataframe = pickle.loads(data)
+        dataframe = strategy.apply(dataframe)
+        load(dataframe, warehouse)
+
+        if strategy.isValid(dataframe):
+            to_notify.append(asset)
+
+    if to_notify:
+        cache.publish(
+            "notify",
+            f"{pipeline} Pipeline: {', '.join(to_notify)}",
+        )

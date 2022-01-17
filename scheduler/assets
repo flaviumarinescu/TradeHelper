@@ -7,6 +7,7 @@
 audusd=x,yahoo
 gc=f,yahoo
 ng=f,yahoo
+nq=f,yahoo
 eurusd=x,yahoo
 ethusdt,binance
 dogeusdt,binance
